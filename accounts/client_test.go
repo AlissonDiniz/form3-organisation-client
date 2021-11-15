@@ -17,10 +17,16 @@ type AccountDataSeed struct {
 	SecondaryIdentification  string   `faker:"len=10"`
 }
 
-func createAccount() *AccountData {
+func init() {
+	// Setting the SERVER_PATH variable
+	Setup(os.Getenv("SERVER_PATH"))
+}
+
+func createAccountData() *AccountData {
 	account_seed := AccountDataSeed{}
 	_ = faker.FakeData(&account_seed)
 
+	version := int64(0)
 	account_classification := "Personal"
 	joint_account := false
 	account_matching_opt_out := false
@@ -43,34 +49,37 @@ func createAccount() *AccountData {
 		ID: faker.UUIDHyphenated(),
 		OrganisationID: faker.UUIDHyphenated(),
 		Attributes: &attributes,
+		Version: &version,
 	}
 	return &account_data
 }
 
 // TestCreateAccount calls form3.com/organization-api/accounts.Create with valid values, checking
 func TestCreateAccount(t *testing.T) {
-	account_data := createAccount()
+	account_data := createAccountData()
+	defer Delete(account_data.ID, *account_data.Version)
 	
 	err := Create(account_data)
 	if err != nil {
-		t.Fatalf("This test should not return an error");
+		t.Fatalf("This test should not return an error: %v", err.Error())
 	}
 }
 
 // TestCreateAccountWithConflict calls form3.com/organization-api/accounts.Create with duplicated account, checking
 func TestCreateAccountWithConflict(t *testing.T) {
-	account_data := createAccount()
+	account_data := createAccountData()
 	Create(account_data)
+	defer Delete(account_data.ID, *account_data.Version)
 	
 	err := Create(account_data)
 	if err != nil {
 		switch err.(type) {
 			case *ConflictError :
 			default:
-        t.Fatalf("This test must return an error ConflictError");
+        t.Fatalf("This test must return an error ConflictError")
     }
 	} else {
-		t.Fatalf("This test must return an error ConflictError");
+		t.Fatalf("This test must return an error ConflictError")
 	}
 }
 
@@ -83,70 +92,70 @@ func TestFetchAccountNotFound(t *testing.T) {
 		switch err.(type) {
 			case *NotFoundError :
 			default:
-        t.Fatalf("This test must return an error NotFoundError");
+        t.Fatalf("This test must return an error NotFoundError")
     }
 	} else {
-		t.Fatalf("This test must return an error NotFoundError");
+		t.Fatalf("This test must return an error NotFoundError")
 	}
 }
 
 // TestFetchAccount calls form3.com/organization-api/accounts.Fetch with an existing id, checking
 func TestFetchAccount(t *testing.T) {
-	account_data := createAccount()
+	account_data := createAccountData()
 	Create(account_data)
+	defer Delete(account_data.ID, *account_data.Version)
 
 	res, err := Fetch(account_data.ID)
 	if err != nil {
-		t.Fatalf("This test should not return an error");
+		t.Fatalf("This test should not return an error: %v", err.Error())
 	}
 	
 	if account_data.ID != res.ID {
-		t.Fatalf("Account ID is different to Account ID fetched");
+		t.Fatalf("Account ID is different to Account ID fetched")
 	} 
 }
 
 // TestDeleteAccountNotFoundInvalidId calls form3.com/organization-api/accounts.Delete with an Id that does not exist, checking
 func TestDeleteAccountNotFoundInvalidId(t *testing.T) {
 	id := faker.UUIDHyphenated()
-	version := 0
+	version := int64(0)
 
 	err := Delete(id, version)
 	if err != nil {
 		switch err.(type) {
 			case *NotFoundError :
 			default:
-        t.Fatalf("This test must return an error NotFoundError");
+        t.Fatalf("This test must return an error NotFoundError")
     }
 	} else {
-		t.Fatalf("This test must return an error NotFoundError");
+		t.Fatalf("This test must return an error NotFoundError")
 	}
 }
 
 // TestDeleteAccountNotFoundInvalidVersion calls form3.com/organization-api/accounts.Delete with a version that does not exist, checking
 func TestDeleteAccountNotFoundInvalidVersion(t *testing.T) {
 	id := faker.UUIDHyphenated()
-	version := 10
+	version := int64(10)
 
 	err := Delete(id, version)
 	if err != nil {
 		switch err.(type) {
 			case *NotFoundError :
 			default:
-        t.Fatalf("This test must return an error NotFoundError");
+        t.Fatalf("This test must return an error NotFoundError")
     }
 	} else {
-		t.Fatalf("This test must return an error NotFoundError");
+		t.Fatalf("This test must return an error NotFoundError")
 	}
 }
 
 // TestDeleteAccount calls form3.com/organization-api/accounts.Delete with an existing id, checking
 func TestDeleteAccount(t *testing.T) {
-	account_data := createAccount()
+	account_data := createAccountData()
 	Create(account_data)
-	version := 0
 
-	err := Delete(account_data.ID, version)
+	err := Delete(account_data.ID, *account_data.Version)
 	if err != nil {
-		t.Fatalf("This test should not return an error");
+		t.Fatalf("This test should not return an error: %v", err.Error())
 	}
 }

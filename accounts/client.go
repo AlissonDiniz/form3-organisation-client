@@ -11,21 +11,26 @@ import (
 	"encoding/json"
 )
 
-const SERVER_PATH = "http://localhost:8080"
-const ACCOUNTS_API_PATH = "/v1/organisation/accounts"
+var SERVER_PATH = ""
+var ACCOUNTS_API_PATH = "/v1/organisation/accounts"
+
+func Setup(server_path string) {
+	SERVER_PATH = server_path
+}
 
 func Fetch(id string) (*AccountData, error){
 	url_path, _ := url.Parse(fmt.Sprintf("%s%s/%s", SERVER_PATH, ACCOUNTS_API_PATH, id))
 
 	res, err := http.Get(url_path.String())
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return nil, &InternalServerError{ErrorMessage: "An error occurred when trying to fetch an Account"}
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return nil, &ReadResponseBodyError{
 			ErrorMessage: "An error occurred when trying to read the response body",
 			StackTrace: err.Error(),
@@ -51,7 +56,7 @@ func Create(account_data *AccountData) error {
 	}
 	json_data, err := json.Marshal(request)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return &JsonParseError{
 			ErrorMessage: "An error occurred when trying to parse request to json",
 			StackTrace: err.Error(),
@@ -60,13 +65,14 @@ func Create(account_data *AccountData) error {
 
 	res, err := http.Post(url_path.String(), "application/json", bytes.NewBuffer(json_data))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return &InternalServerError{ErrorMessage: "An error occurred when trying to create an new Account"}
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return &ReadResponseBodyError{
 			ErrorMessage: "An error occurred when trying to read the response body",
 			StackTrace: err.Error(),
@@ -87,10 +93,10 @@ func Create(account_data *AccountData) error {
 	return nil
 }
 
-func Delete(id string, version int) error {
+func Delete(id string, version int64) error {
 	url_path, _ := url.Parse(fmt.Sprintf("%s%s/%s", SERVER_PATH, ACCOUNTS_API_PATH, id))
 	params := url.Values{}
-	params.Add("version", strconv.Itoa(version))
+	params.Add("version", strconv.FormatInt(version, 10))
 
 	url_path.RawQuery = params.Encode()
 
@@ -98,13 +104,14 @@ func Delete(id string, version int) error {
 	req, _ := http.NewRequest("DELETE", url_path.String(), nil)
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return &InternalServerError{ErrorMessage: "An error occurred when trying to delete an Account"}
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err.Error())
 		return &ReadResponseBodyError{
 			ErrorMessage: "An error occurred when trying to read the response body",
 			StackTrace: err.Error(),
